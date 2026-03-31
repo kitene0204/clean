@@ -84,7 +84,7 @@
             padding: 25px 10px 15px 10px; /* 위쪽 여백을 늘려 헤더가 겹칠 공간 확보 */
             text-align: center;
             font-size: 1.6rem;
-            line-height: 1.5;
+            line-height: 1.6;
             color: #333;
             flex-grow: 1;
             display: flex;
@@ -94,6 +94,8 @@
             border-radius: 8px;
             position: relative;
             z-index: 10;
+            word-break: keep-all; /* 이름(단어) 중간에서 줄바꿈 방지 */
+            overflow-wrap: break-word;
         }
 
         /* 직접 텍스트 수정 가능 영역 스타일 */
@@ -217,9 +219,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-gray-700 font-bold mb-2">청소 구역 목록 (줄바꿈으로 구분)</label>
+                    <label class="block text-gray-700 font-bold mb-2">청소 구역 및 인원수 (줄바꿈으로 구분)</label>
                     <textarea id="areas-input" rows="6" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500 font-sans text-sm"></textarea>
-                    <p class="text-xs text-gray-500 mt-1">* 구역 개수에 맞게 카드가 생성됩니다. (최대 6개 권장)</p>
+                    <p class="text-xs text-gray-500 mt-1">* 예: <b>교실 쓸기(6명)</b> 형태로 괄호 안에 숫자를 넣으면 해당 인원수만큼 자동 배정됩니다.</p>
                 </div>
             </div>
 
@@ -231,20 +233,20 @@
     </div>
 
     <script>
-        // 초기 데이터 세팅 (이미지 기반)
+        // 초기 데이터 세팅 (총 18명)
         let students = [
             "강윤찬", "강주연", "김민지", "김진후", "김현지", "박채현",
             "성서아", "송다정", "엄호준", "윤시우", "이솔빛나", "이정",
-            "전성후", "정혜원", "최예은", "한태은", "허은서", "황혜리", "이창민"
+            "전성후", "정혜원", "최예은", "한태은", "허은서", "황혜리"
         ];
         
+        // 구역별 인원수 설정 객체 배열
         let areas = [
-            "교실 쓸기",
-            "책상 밀기",
-            "분리수거, 복도",
-            "선생님 책상",
-            "환기, 칠판",
-            "과학실"
+            { name: "교실 쓸기", capacity: 6 },
+            { name: "책상 밀기", capacity: 6 },
+            { name: "과학실", capacity: 4 },
+            { name: "환기, 칠판", capacity: 1 },
+            { name: "분리수거, 복도", capacity: 1 }
         ];
 
         // 배정 결과 저장용 객체
@@ -261,8 +263,8 @@
         // 배정 객체 초기화
         function initAssignments() {
             assignments = {};
-            areas.forEach(area => {
-                assignments[area] = [];
+            areas.forEach(areaObj => {
+                assignments[areaObj.name] = [];
             });
         }
 
@@ -277,7 +279,8 @@
             const grid = document.getElementById('roster-grid');
             grid.innerHTML = '';
 
-            areas.forEach((area, index) => {
+            areas.forEach((areaObj, index) => {
+                const area = areaObj.name;
                 // 테마 클래스 선택 (0~5 순환)
                 const themeIdx = index % 6;
                 const headTheme = `theme-${themeIdx}-head`;
@@ -321,10 +324,8 @@
             });
         }
 
-        // 랜덤 뽑기 로직
+        // 인원수에 맞춘 랜덤 뽑기 로직
         function randomize() {
-            // 효과음이나 애니메이션 효과 추가 가능
-            
             initAssignments();
             
             // 학생 배열 복사 및 셔플 (Fisher-Yates 알고리즘)
@@ -334,13 +335,23 @@
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
 
-            // 구역별로 순서대로 분배
-            if(areas.length > 0) {
-                let areaIndex = 0;
-                shuffled.forEach(student => {
-                    assignments[areas[areaIndex]].push(student);
-                    areaIndex = (areaIndex + 1) % areas.length;
-                });
+            // 구역별 지정된 정원(capacity)에 맞게 배정
+            areas.forEach(areaObj => {
+                for(let i = 0; i < areaObj.capacity; i++) {
+                    if(shuffled.length > 0) {
+                        assignments[areaObj.name].push(shuffled.pop());
+                    }
+                }
+            });
+
+            // 혹시 남는 학생이 있다면 (설정된 인원보다 학생수가 많을 경우)
+            // 앞에서부터 남은 자리에 1명씩 추가로 골고루 배정
+            if(shuffled.length > 0) {
+                let index = 0;
+                while(shuffled.length > 0) {
+                    assignments[areas[index % areas.length].name].push(shuffled.pop());
+                    index++;
+                }
             }
 
             renderGrid();
@@ -391,17 +402,32 @@
 
         function populateSettings() {
             document.getElementById('students-input').value = students.join(', ');
-            document.getElementById('areas-input').value = areas.join('\n');
+            // 구역명(인원수) 형태로 출력
+            document.getElementById('areas-input').value = areas.map(a => `${a.name}(${a.capacity}명)`).join('\n');
         }
 
         function saveSettings() {
-            // 학생 목록 파싱 (콤마 또는 줄바꿈으로 구분)
+            // 학생 목록 파싱
             const stuRaw = document.getElementById('students-input').value;
             students = stuRaw.split(/,|\n/).map(s => s.trim()).filter(s => s.length > 0);
 
-            // 구역 목록 파싱 (줄바꿈 기준)
+            // 구역 목록 및 인원수 파싱
             const areaRaw = document.getElementById('areas-input').value;
-            let newAreas = areaRaw.split('\n').map(a => a.trim()).filter(a => a.length > 0);
+            let newAreas = [];
+            
+            areaRaw.split('\n').forEach(line => {
+                let text = line.trim();
+                if(!text) return;
+                
+                // 정규식을 사용해 "이름(숫자)" 또는 "이름(숫자명)" 형태 파싱
+                let match = text.match(/(.+?)\s*\((\d+)[^\)]*\)/);
+                if(match) {
+                    newAreas.push({ name: match[1].trim(), capacity: parseInt(match[2], 10) });
+                } else {
+                    // 괄호가 없을 경우 기본 1명으로 세팅
+                    newAreas.push({ name: text, capacity: 1 });
+                }
+            });
             
             if(newAreas.length === 0) {
                 alert('최소 1개 이상의 청소 구역이 필요합니다.');
@@ -409,7 +435,7 @@
             }
             areas = newAreas;
 
-            initAssignments(); // 구역이 변경되었으므로 배정 초기화
+            initAssignments(); 
             renderGrid();
             toggleSettings();
         }
