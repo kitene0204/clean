@@ -7,8 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 이미지 저장을 위한 html2canvas 라이브러리 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- 3가지 귀여운 폰트 적용 (Jua, Gamja Flower, Hi Melody) -->
-    <link href="https://fonts.googleapis.com/css2?family=Gamja+Flower&family=Hi+Melody&family=Jua&display=swap" rel="stylesheet">
+    <!-- 멋진 타이틀 폰트(Do Hyeon)와 귀여운 폰트(Gamja Flower, Hi Melody) 적용 -->
+    <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gamja+Flower&family=Hi+Melody&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -18,7 +18,7 @@
         }
 
         /* 폰트 클래스 3가지 정의 */
-        .font-title { font-family: 'Jua', sans-serif; }
+        .font-title { font-family: 'Do Hyeon', sans-serif; }
         .font-role { font-family: 'Gamja Flower', cursive; }
         .font-name { font-family: 'Hi Melody', cursive; }
 
@@ -83,7 +83,8 @@
         .card-body {
             padding: 25px 10px 15px 10px; /* 위쪽 여백을 늘려 헤더가 겹칠 공간 확보 */
             text-align: center;
-            font-size: 1.6rem;
+            font-size: 2rem; /* 폰트 크기 키움 (1.6rem -> 2rem) */
+            font-weight: bold; /* 진한 글씨체 적용 */
             line-height: 1.6;
             color: #333;
             flex-grow: 1;
@@ -288,7 +289,7 @@
 
                 // 배치된 학생 이름 조합 (없으면 안내 메시지)
                 let assignedText = assignments[area].join(', ');
-                if(!assignedText) assignedText = "<span style='opacity:0.5; font-size:1rem;'>비어있음</span>";
+                if(!assignedText) assignedText = "<span class='empty-mark' style='opacity:0.5; font-size:1.2rem; font-weight:normal;'>비어있음</span>";
 
                 // 약간의 삐뚤어짐 효과 (포스트잇 느낌)
                 const rotation = (Math.random() * 4 - 2).toFixed(1); // -2deg to 2deg
@@ -311,14 +312,24 @@
 
             // 직접 수정한 내용을 assignments 객체에 동기화하기 위한 이벤트 리스너
             document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                // 클릭해서 입력 시작할 때 '비어있음' 마크 지우기 (원래 폰트/크기 굵기가 유지되도록)
+                el.addEventListener('focus', function() {
+                    if (this.querySelector('.empty-mark')) {
+                        this.innerHTML = '';
+                    }
+                });
+
                 el.addEventListener('blur', function() {
                     const area = this.getAttribute('data-area');
-                    // html 태그 제거 후 콤마로 분리하여 저장 (간이 동기화)
+                    // html 태그 제거 후 콤마로 분리하여 저장
                     let text = this.innerText.replace(/비어있음/g, '').trim();
                     if(text) {
                         assignments[area] = text.split(',').map(s => s.trim()).filter(s => s);
+                        // 브라우저 폰트 태그 꼬임 방지를 위해 깔끔한 텍스트로 덮어쓰기
+                        this.innerHTML = text;
                     } else {
                         assignments[area] = [];
+                        this.innerHTML = "<span class='empty-mark' style='opacity:0.5; font-size:1.2rem; font-weight:normal;'>비어있음</span>";
                     }
                 });
             });
