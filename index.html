@@ -121,6 +121,16 @@
             }
         }
 
+        /* 다른 사이트(청소 타이머)에 포스터만 넣을 때: 주소 끝 ?embed */
+        html.embed body { background: transparent; overflow: hidden; }
+        html.embed #controls, html.embed #paste-modal, html.embed #settings-modal { display: none !important; }
+        html.embed #poster-wrapper { padding: 0 !important; display: block; overflow: hidden; }
+        html.embed #poster-area {
+            width: 768px !important; max-width: none !important;
+            height: 1086px; max-height: none !important;
+            border-radius: 0; box-shadow: none; transform-origin: top left;
+        }
+
         /* 색상 테마 정의 */
         .theme-0-head { background-color: #c09e37; } .theme-0-body { background-color: #fbe654; } /* 노랑 */
         .theme-1-head { background-color: #cc4f52; } .theme-1-body { background-color: #f2555a; color: white;} /* 빨강 */
@@ -137,6 +147,18 @@
     </style>
 </head>
 <body class="flex flex-col h-screen text-gray-800">
+    <script>
+        // ?embed 로 열면 포스터만 보여주고, 창 너비에 맞게 크기 조절
+        if (new URLSearchParams(location.search).has('embed')) {
+            document.documentElement.classList.add('embed');
+            const fitPoster = () => {
+                const poster = document.getElementById('poster-area');
+                if (poster) poster.style.transform = 'scale(' + (window.innerWidth / 768) + ')';
+            };
+            window.addEventListener('resize', fitPoster);
+            document.addEventListener('DOMContentLoaded', fitPoster);
+        }
+    </script>
 
     <!-- 상단 컨트롤 패널 -->
     <div id="controls" class="bg-white shadow-md p-4 flex flex-wrap items-center justify-between gap-4 z-50 relative">
