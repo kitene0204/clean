@@ -290,15 +290,9 @@
             populateSettings();
         };
 
-        // ---------- 구글 시트 붙여넣기 ----------
-        // 예전에 붙여넣은 기록이 있으면 그걸 사용 (이 브라우저에만 저장)
-        try {
-            const saved = JSON.parse(localStorage.getItem('sheetRecords') || 'null');
-            if (saved && typeof saved === 'object') {
-                Object.keys(sheetRecords).forEach(k => delete sheetRecords[k]);
-                Object.assign(sheetRecords, saved);
-            }
-        } catch (e) {}
+        // ---------- 구글 시트 붙여넣기 (임시로 바꿔 보기용, 저장하지 않음) ----------
+        // 기본 기록은 위의 sheetRecords (index.html 안) 가 기준
+        try { localStorage.removeItem('sheetRecords'); } catch (e) {}
 
         function togglePaste() {
             const modal = document.getElementById('paste-modal');
@@ -356,7 +350,6 @@
             }
             Object.keys(sheetRecords).forEach(k => delete sheetRecords[k]);
             Object.assign(sheetRecords, records);
-            try { localStorage.setItem('sheetRecords', JSON.stringify(records)); } catch (e) {}
 
             const months = Object.keys(records).map(Number).sort((a, b) => ((a + 9) % 12) - ((b + 9) % 12)); // 3월부터 순서대로
             const select = document.getElementById('month-select');
