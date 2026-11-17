@@ -300,6 +300,11 @@
                     if (!data || !data.months || !Object.keys(data.months).length) return;
                     Object.keys(sheetRecords).forEach(k => delete sheetRecords[k]);
                     Object.assign(sheetRecords, data.months);
+                    // 시트에서 '몇 월을 올릴까요?'로 고른 달을 보여주기
+                    if (data.show && data.months[data.show]) {
+                        document.getElementById('month-select').value = String(data.show);
+                        updateTitle();
+                    }
                     loadMonth();
                 })
                 .catch(() => {});
