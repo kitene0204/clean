@@ -436,6 +436,19 @@
             document.getElementById('display-month').innerText = month;
         }
 
+        // 4글자 이상 이름은 성을 빼고 뒤 3글자만 (예: 이솔빛나 → 솔빛나)
+        function shortName(name) {
+            return name.length >= 4 ? name.slice(-3) : name;
+        }
+
+        // 카드에 들어갈 이름: 3명 이상이면 두 줄로 나눠서 (예: 4명 → 2명 / 2명)
+        function formatNames(list) {
+            const names = list.map(shortName);
+            if (names.length < 3) return names.join(', ');
+            const half = Math.ceil(names.length / 2);
+            return names.slice(0, half).join(', ') + ',<br>' + names.slice(half).join(', ');
+        }
+
         // 그리드 화면 그리기
         function renderGrid() {
             const grid = document.getElementById('roster-grid');
@@ -449,7 +462,7 @@
                 const bodyTheme = `theme-${themeIdx}-body`;
 
                 // 배치된 학생 이름 조합 (없으면 안내 메시지)
-                let assignedText = assignments[area].join(', ');
+                let assignedText = formatNames(assignments[area]);
                 if(!assignedText) assignedText = "<span class='empty-mark' style='opacity:0.5; font-size:1.2rem; font-weight:normal;'>비어있음</span>";
 
                 // 약간의 삐뚤어짐 효과 (포스트잇 느낌)
@@ -487,7 +500,7 @@
                     if(text) {
                         assignments[area] = text.split(',').map(s => s.trim()).filter(s => s);
                         // 브라우저 폰트 태그 꼬임 방지를 위해 깔끔한 텍스트로 덮어쓰기
-                        this.innerHTML = text;
+                        this.innerHTML = formatNames(assignments[area]);
                     } else {
                         assignments[area] = [];
                         this.innerHTML = "<span class='empty-mark' style='opacity:0.5; font-size:1.2rem; font-weight:normal;'>비어있음</span>";
