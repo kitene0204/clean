@@ -143,7 +143,7 @@
         <div class="flex items-center gap-3">
             <h1 class="text-2xl font-bold text-gray-700 mr-2"><i class="fa-solid fa-broom text-green-600"></i> 청소구역 알리미</h1>
             
-            <select id="month-select" class="border-2 border-gray-300 rounded-lg px-3 py-2 text-lg focus:outline-none focus:border-green-500 cursor-pointer" onchange="updateTitle()">
+            <select id="month-select" class="border-2 border-gray-300 rounded-lg px-3 py-2 text-lg focus:outline-none focus:border-green-500 cursor-pointer" onchange="updateTitle(); loadMonth();">
                 <option value="1">1월</option><option value="2">2월</option>
                 <option value="3" selected>3월</option><option value="4">4월</option>
                 <option value="5">5월</option><option value="6">6월</option>
@@ -238,28 +238,59 @@
         let students = [
             "강윤찬", "강주연", "김민지", "김진후", "김현지", "박채현",
             "성서아", "송다정", "엄호준", "윤시우", "이솔빛나", "이정",
-            "전성후", "정혜원", "최예은", "한태은", "허은서", "황혜리"
+            "전성후", "정혜원", "최예은", "한태은", "허은서", "황혜리",
+            "김세은"
         ];
         
         // 구역별 인원수 설정 객체 배열
         let areas = [
-            { name: "교실 쓸기", capacity: 6 },
-            { name: "책상 밀기", capacity: 6 },
+            { name: "교실쓸기", capacity: 6 },
+            { name: "책상밀기", capacity: 6 },
             { name: "과학실", capacity: 4 },
-            { name: "환기, 칠판", capacity: 1 },
+            { name: "환기, 칠판, 식물", capacity: 1 },
             { name: "분리수거, 복도", capacity: 1 }
         ];
+
+        // 구글 시트(청소구역 탭)에 적힌 달별 청소구역 기록 { "11": { "과학실": ["강윤찬", ...] } }
+        const sheetRecords = {"3": {"교실쓸기": ["강윤찬", "강주연", "김민지", "김진후", "김현지", "박채현"], "책상밀기": ["성서아", "송다정", "엄호준", "윤시우", "이솔빛나", "이정"], "과학실": ["전성후", "정혜원", "최예은", "한태은"], "환기, 칠판, 식물": ["허은서"], "분리수거, 복도": ["황혜리"]}, "4": {"과학실": ["강윤찬", "강주연", "허은서", "황혜리"], "환기, 칠판, 식물": ["김민지"], "분리수거, 복도": ["김진후"], "교실쓸기": ["김현지", "박채현", "성서아", "송다정", "엄호준", "윤시우"], "책상밀기": ["이솔빛나", "이정", "전성후", "정혜원", "최예은", "한태은"]}, "5": {"책상밀기": ["강윤찬", "강주연", "최예은", "한태은", "허은서", "황혜리"], "과학실": ["김민지", "김진후", "김현지", "박채현"], "환기, 칠판, 식물": ["성서아"], "분리수거, 복도": ["송다정"], "교실쓸기": ["엄호준", "윤시우", "이솔빛나", "이정", "전성후", "정혜원"]}, "6": {"책상밀기": ["강윤찬", "강주연", "김민지", "김진후", "김현지", "박채현"], "과학실": ["성서아", "송다정", "엄호준", "윤시우"], "환기, 칠판, 식물": ["이솔빛나"], "분리수거, 복도": ["이정"], "교실쓸기": ["전성후", "정혜원", "최예은", "한태은", "허은서", "황혜리"]}, "7": {"교실쓸기": ["강윤찬", "강주연", "김민지", "김현지", "송다정", "엄호준"], "과학실": ["김진후", "박채현", "성서아", "이솔빛나"], "책상밀기": ["윤시우", "이정", "전성후", "정혜원", "최예은", "한태은"], "환기, 칠판, 식물": ["허은서"], "분리수거, 복도": ["황혜리"]}, "9": {"책상밀기": ["강윤찬", "강주연", "김민지", "김진후", "박채현", "황혜리"], "과학실": ["김현지", "송다정", "전성후", "최예은"], "환기, 칠판, 식물": ["성서아"], "분리수거, 복도": ["엄호준"], "교실쓸기": ["윤시우", "이솔빛나", "이정", "정혜원", "한태은", "허은서", "김세은"]}, "10": {"과학실": ["강윤찬", "김현지", "성서아", "이솔빛나"], "교실쓸기": ["강주연", "김민지", "김진후", "박채현", "송다정", "황혜리"], "책상밀기": ["엄호준", "윤시우", "이정", "전성후", "정혜원", "최예은"], "환기, 칠판, 식물": ["한태은"], "분리수거, 복도": ["허은서", "김세은"]}, "11": {"과학실": ["강윤찬", "강주연", "김진후", "최예은"], "교실쓸기": ["김민지", "김현지", "한태은", "허은서", "황혜리", "김세은"], "책상밀기": ["박채현", "성서아", "송다정", "엄호준", "윤시우", "이솔빛나"], "환기, 칠판, 식물": ["이정"], "분리수거, 복도": ["전성후", "정혜원"]}, "12": {"교실쓸기": ["강윤찬", "강주연", "김진후", "김현지", "박채현", "성서아"], "과학실": ["김민지", "엄호준", "윤시우", "김세은"], "책상밀기": ["송다정", "이솔빛나", "이정", "전성후", "정혜원", "최예은"], "환기, 칠판, 식물": ["한태은"], "분리수거, 복도": ["허은서", "황혜리"]}};
 
         // 배정 결과 저장용 객체
         let assignments = {};
 
         // 초기화 시 실행
         window.onload = () => {
-            initAssignments();
-            renderGrid();
-            populateSettings();
+            // 이번 달을 기본으로 선택하고, 시트 기록이 있으면 그대로 보여주기
+            document.getElementById('month-select').value = String(new Date().getMonth() + 1);
             updateTitle();
+            loadMonth();
+            populateSettings();
         };
+
+        // 구역 이름 비교 (띄어쓰기 무시, "환기, 칠판" 과 "환기, 칠판, 식물" 처럼 앞부분이 같으면 같은 구역)
+        function findAreaName(zone) {
+            const n = s => s.replace(/\s/g, '');
+            const z = n(zone);
+            const found = areas.find(a => { const x = n(a.name); return x === z || x.startsWith(z) || z.startsWith(x); });
+            return found ? found.name : null;
+        }
+
+        // 선택한 달의 시트 기록 불러오기 (기록이 없는 달은 빈 칸)
+        function loadMonth() {
+            const month = document.getElementById('month-select').value;
+            const record = sheetRecords[month];
+            initAssignments();
+            if (record) {
+                Object.keys(record).forEach(zone => {
+                    let key = findAreaName(zone);
+                    if (!key) {
+                        areas.push({ name: zone, capacity: record[zone].length });
+                        key = zone;
+                    }
+                    assignments[key] = [...record[zone]];
+                });
+            }
+            renderGrid();
+        }
 
         // 배정 객체 초기화
         function initAssignments() {
