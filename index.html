@@ -154,6 +154,9 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <button onclick="togglePaste()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg shadow transition duration-200 text-lg flex items-center gap-2">
+                <i class="fa-solid fa-paste"></i> 시트 붙여넣기
+            </button>
             <button onclick="randomize()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow transition duration-200 text-lg flex items-center gap-2">
                 <i class="fa-solid fa-dice"></i> 뽑기
             </button>
@@ -200,6 +203,27 @@
             <!-- 청소 구역 그리드 -->
             <div id="roster-grid" class="grid grid-cols-2 gap-x-8 gap-y-12 z-10 px-4 md:px-12 flex-grow content-start">
                 <!-- 자바스크립트로 카드가 생성되는 곳 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 시트 붙여넣기 모달창 -->
+    <div id="paste-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-paste text-emerald-500"></i> 구글 시트 붙여넣기</h3>
+                <button onclick="togglePaste()" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+            </div>
+            <ol class="text-gray-600 text-sm leading-7 list-decimal pl-5 mb-3">
+                <li>구글 시트 <b>청소구역</b> 탭에서 <b>A1 칸부터 마지막 달·마지막 학생 칸까지</b> 드래그해서 고르세요.<br><span class="text-gray-400">(달 이름이 있는 맨 윗줄과 학생 이름 칸이 꼭 들어가야 해요)</span></li>
+                <li><b>Ctrl + C</b> 로 복사하세요.</li>
+                <li>아래 칸을 클릭하고 <b>Ctrl + V</b> 하면 바로 적용돼요!</li>
+            </ol>
+            <textarea id="paste-input" rows="6" placeholder="여기에 Ctrl + V" class="w-full border-2 border-dashed border-emerald-300 rounded-lg p-3 focus:outline-none focus:border-emerald-500 font-sans text-sm"></textarea>
+            <p id="paste-result" class="text-sm mt-2 min-h-[1.25rem]"></p>
+            <div class="mt-4 pt-4 border-t flex justify-end gap-2">
+                <button onclick="togglePaste()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">닫기</button>
+                <button onclick="applyPastedText(document.getElementById('paste-input').value)" class="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition">적용</button>
             </div>
         </div>
     </div>
@@ -265,6 +289,99 @@
             loadMonth();
             populateSettings();
         };
+
+        // ---------- 구글 시트 붙여넣기 ----------
+        // 예전에 붙여넣은 기록이 있으면 그걸 사용 (이 브라우저에만 저장)
+        try {
+            const saved = JSON.parse(localStorage.getItem('sheetRecords') || 'null');
+            if (saved && typeof saved === 'object') {
+                Object.keys(sheetRecords).forEach(k => delete sheetRecords[k]);
+                Object.assign(sheetRecords, saved);
+            }
+        } catch (e) {}
+
+        function togglePaste() {
+            const modal = document.getElementById('paste-modal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
+            if (!modal.classList.contains('hidden')) {
+                const box = document.getElementById('paste-input');
+                box.value = '';
+                document.getElementById('paste-result').textContent = '';
+                box.focus();
+            }
+        }
+
+        // 시트에서 복사한 표(탭으로 구분된 글자) → { "11": { "과학실": ["강윤찬", ...] } }
+        function parseSheetText(text) {
+            const rows = text.replace(/\r/g, '').split('\n').map(line => line.split('\t'));
+            // 달 이름이 있는 줄 찾기
+            const headerIdx = rows.findIndex(r => r.some(c => /^\s*\d{1,2}\s*월\s*$/.test(c)));
+            if (headerIdx === -1) return null;
+            const header = rows[headerIdx];
+            const monthCols = [];
+            header.forEach((c, i) => {
+                const m = c.match(/^\s*(\d{1,2})\s*월\s*$/);
+                if (m) monthCols.push({ col: i, month: String(Number(m[1])) });
+            });
+            const firstMonthCol = monthCols[0].col;
+            const records = {};
+            for (let r = headerIdx + 1; r < rows.length; r++) {
+                const row = rows[r];
+                // 학생 이름: 첫 달 칸 왼쪽에서 숫자가 아닌 마지막 글자
+                let name = '';
+                for (let c = 0; c < firstMonthCol; c++) {
+                    const v = (row[c] || '').trim();
+                    if (v && isNaN(Number(v))) name = v;
+                }
+                if (!name) continue;
+                monthCols.forEach(({ col, month }) => {
+                    const zone = (row[col] || '').trim();
+                    if (!zone) return;
+                    if (!records[month]) records[month] = {};
+                    if (!records[month][zone]) records[month][zone] = [];
+                    records[month][zone].push(name);
+                });
+            }
+            return records;
+        }
+
+        function applyPastedText(text) {
+            const result = document.getElementById('paste-result');
+            const records = parseSheetText(text || '');
+            if (!records || !Object.keys(records).length) {
+                result.className = 'text-sm mt-2 text-red-500';
+                result.textContent = '표를 읽지 못했어요. 달 이름(예: 11월)이 있는 맨 윗줄과 학생 이름 칸까지 함께 복사해 주세요.';
+                return;
+            }
+            Object.keys(sheetRecords).forEach(k => delete sheetRecords[k]);
+            Object.assign(sheetRecords, records);
+            try { localStorage.setItem('sheetRecords', JSON.stringify(records)); } catch (e) {}
+
+            const months = Object.keys(records).map(Number).sort((a, b) => ((a + 9) % 12) - ((b + 9) % 12)); // 3월부터 순서대로
+            const select = document.getElementById('month-select');
+            const thisMonth = String(new Date().getMonth() + 1);
+            // 이번 달 기록이 있으면 이번 달, 없으면 가장 마지막 달 보여주기
+            select.value = records[thisMonth] ? thisMonth : String(months[months.length - 1]);
+            updateTitle();
+            loadMonth();
+            result.className = 'text-sm mt-2 text-emerald-600';
+            result.textContent = `✅ ${months.map(m => m + '월').join(', ')} 청소구역을 불러왔어요!`;
+            setTimeout(() => {
+                const modal = document.getElementById('paste-modal');
+                if (!modal.classList.contains('hidden')) togglePaste();
+            }, 1200);
+        }
+
+        // 붙여넣으면 바로 적용
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('paste-input').addEventListener('paste', (e) => {
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                e.preventDefault();
+                document.getElementById('paste-input').value = text;
+                applyPastedText(text);
+            });
+        });
 
         // 구역 이름 비교 (띄어쓰기 무시, "환기, 칠판" 과 "환기, 칠판, 식물" 처럼 앞부분이 같으면 같은 구역)
         function findAreaName(zone) {
